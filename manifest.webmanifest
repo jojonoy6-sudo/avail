@@ -1,0 +1,15 @@
+{
+  "name": "ห้องว่าง",
+  "short_name": "ห้องว่าง",
+  "description": "เช็คห้องว่างในโรงเรียน แนะนำห้องจากตารางของคุณ",
+  "lang": "th",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#f5f5f7",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

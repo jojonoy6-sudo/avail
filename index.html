@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f5f7">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ห้องว่าง">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<title>ห้องว่าง</title>
+<style>
+:root{
+  --bg:#f5f5f7; --card:#fff; --text:#1d1d1f; --sub:#6e6e73; --line:rgba(0,0,0,.09);
+  --blue:#0071e3; --green:#30b455; --red:#ff3b30; --fill:rgba(120,120,128,.12);
+  --glass:rgba(245,245,247,.78); --seg-on:#fff; --busy:rgba(120,120,128,.28);
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.04);
+}
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#000; --card:#1c1c1e; --text:#f5f5f7; --sub:#98989d; --line:rgba(255,255,255,.12);
+  --blue:#2997ff; --green:#30d158; --red:#ff453a; --fill:rgba(120,120,128,.28);
+  --glass:rgba(22,22,23,.78); --seg-on:#636366; --busy:rgba(235,235,245,.22);
+  --shadow:none;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#000; --card:#1c1c1e; --text:#f5f5f7; --sub:#98989d; --line:rgba(255,255,255,.12);
+    --blue:#2997ff; --green:#30d158; --red:#ff453a; --fill:rgba(120,120,128,.28);
+    --glass:rgba(22,22,23,.78); --seg-on:#636366; --busy:rgba(235,235,245,.22);
+    --shadow:none;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font:17px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Sukhumvit Set","Noto Sans Thai","Thonburi",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+#app{max-width:520px; margin:0 auto; min-height:100dvh; padding:env(safe-area-inset-top) 20px calc(104px + env(safe-area-inset-bottom))}
+.view{animation:in .3s ease-out}
+@keyframes in{from{opacity:0; transform:translateY(8px)}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important; transition:none!important}}
+
+h1.large{font-size:34px; line-height:1.15; font-weight:700; letter-spacing:-.02em; margin:30px 0 4px}
+h2.sec{font-size:22px; font-weight:700; letter-spacing:-.01em; margin:38px 0 2px}
+h3{font-size:20px; font-weight:700; margin:0}
+.sub{color:var(--sub); font-size:15px; margin:0}
+.small{font-size:13px; color:var(--sub)}
+.eyebrow{font-size:13px; font-weight:600; letter-spacing:.02em; color:var(--sub)}
+.stack>*+*{margin-top:12px}
+.gap{height:16px}
+
+.card{background:var(--card); border-radius:22px; padding:22px; box-shadow:var(--shadow)}
+.hero{margin-top:22px; padding:26px 24px 24px}
+.big{font-size:clamp(44px,15vw,64px); line-height:1.05; font-weight:700; letter-spacing:-.03em; margin:6px 0 8px; overflow-wrap:anywhere}
+.big.md{font-size:clamp(30px,9vw,40px); letter-spacing:-.02em}
+.big.green{color:var(--green)}
+.dot{display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--green); margin-right:7px; vertical-align:middle; position:relative; top:-1px}
+.dot.busy{background:var(--busy)}
+
+.rec-main{display:block; width:100%; text-align:left; border:0; background:none; padding:0}
+.row-main{border:0; background:none; text-align:left; padding:0; min-width:0}
+.rec-actions{margin-top:16px; display:flex; gap:8px}
+.chip svg{width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; margin:-2px 6px -2px -2px; vertical-align:middle}
+h1.status{font-size:clamp(30px,9vw,38px); line-height:1.12; font-weight:700; letter-spacing:-.025em; margin:6px 0 4px}
+.toast{position:fixed; left:16px; right:16px; bottom:calc(86px + env(safe-area-inset-bottom)); z-index:40; max-width:488px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:13px 18px; border-radius:16px; background:rgba(40,40,42,.92); color:#fff; font-size:15px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); opacity:0; transform:translateY(12px); pointer-events:none; transition:opacity .25s,transform .25s}
+.toast.on{opacity:1; transform:none; pointer-events:auto}
+.toast button{border:0; background:none; color:#4db3ff; font-weight:600; font-size:15px; padding:0}
+.rec .room-num{font-size:clamp(60px,21vw,88px); line-height:1.02; font-weight:700; letter-spacing:-.04em; margin:2px 0 4px}
+.rec .room-sub{font-size:17px; color:var(--sub)}
+.rec .until{margin-top:14px; font-weight:600; font-size:15px}
+.rec .why{margin-top:4px; color:var(--sub); font-size:14px}
+
+.group{background:var(--card); border-radius:18px; overflow:hidden; box-shadow:var(--shadow)}
+.group+.group,.group+.stack{margin-top:12px}
+.row{display:flex; align-items:center; gap:12px; width:100%; padding:14px 18px; border:0; background:none; text-align:left; border-bottom:.5px solid var(--line); min-height:56px}
+.row:last-child{border-bottom:0}
+.row .grow{flex:1; min-width:0}
+.row .t{font-size:19px; font-weight:600; letter-spacing:-.01em}
+.row .t.n{font-size:17px; font-weight:500}
+.row .s{font-size:14px; color:var(--sub)}
+.row .end{color:var(--sub); font-size:15px; text-align:right; white-space:nowrap}
+.chev{width:16px; height:16px; stroke:var(--sub); opacity:.6; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none}
+.link{border:0; background:none; color:var(--blue); font-size:17px; padding:14px 2px 0}
+.empty{padding:28px 22px; text-align:center; color:var(--sub)}
+
+.seg{display:flex; gap:2px; background:var(--fill); border-radius:10px; padding:2px; margin:18px 0 6px}
+.seg button{flex:1; border:0; background:none; padding:8px 0; border-radius:8px; font-size:15px; transition:background .2s}
+.seg button.on{background:var(--seg-on); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.14)}
+
+.seg.seg-sm{margin:0; flex:none}
+.seg-sm button{flex:none; padding:4px 11px; font-size:13px}
+.tt{display:grid; grid-template-columns:36px repeat(5,minmax(0,1fr)); gap:4px; margin-top:16px}
+.tt .th{text-align:center; font-size:13px; font-weight:600; color:var(--sub); padding:2px 0 4px}
+.tt .th.cur{color:var(--blue)}
+.tp{display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.1}
+.tp b{font-size:16px; font-weight:600}
+.tp small{font-size:9.5px; color:var(--sub)}
+.tp.cur b{color:var(--blue)}
+.tc{min-height:54px; border:0; border-radius:11px; padding:4px 3px; background:var(--fill); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; text-align:center; overflow:hidden; transition:transform .12s}
+.tc:active{transform:scale(.95)}
+.tc.busy{background:color-mix(in srgb,var(--blue) 15%,var(--card))}
+.tc b{font-size:12px; font-weight:600; line-height:1.15; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-word}
+.tc small{font-size:10px; color:var(--sub); line-height:1.1}
+.tc.ov{outline:1.5px dashed var(--blue); outline-offset:-2px}
+.pills{display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin:12px 0}
+.pill{border:0; background:var(--card); border-radius:14px; padding:9px 0 7px; display:flex; flex-direction:column; align-items:center; gap:0; line-height:1.15; box-shadow:var(--shadow); transition:background .2s,color .2s}
+.pill b{font-size:20px; font-weight:600}
+.pill small{font-size:11px; color:var(--sub)}
+.pill.mid{background:color-mix(in srgb,var(--blue) 16%,var(--card))}
+.pill.on{background:var(--blue); color:#fff}
+.pill.on small{color:rgba(255,255,255,.8)}
+.chips{display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 4px}
+.chip{border:0; background:var(--fill); border-radius:980px; padding:7px 14px; font-size:14px}
+.chip.on{background:var(--blue); color:#fff}
+.gh{font-size:13px; font-weight:600; color:var(--sub); margin:22px 4px 8px; letter-spacing:.02em}
+
+.pn{width:40px; flex:none; text-align:center}
+.pn b{display:block; font-size:19px; font-weight:600; line-height:1.1}
+.pn small{font-size:10.5px; color:var(--sub)}
+
+.ibtn{border:0; background:none; padding:6px; border-radius:10px; color:var(--sub); display:inline-flex}
+.ibtn svg{width:24px; height:24px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+.ibtn.on{color:#ff9f0a}
+.ibtn.on.hd{color:var(--red)}
+.ibtn.on svg.star{fill:currentColor}
+
+.switch{position:relative; width:51px; height:31px; flex:none}
+.switch input{position:absolute; inset:0; opacity:0; margin:0; width:100%; height:100%; z-index:1}
+.switch span{position:absolute; inset:0; border-radius:16px; background:var(--fill); transition:background .25s}
+.switch span::after{content:""; position:absolute; top:2px; left:2px; width:27px; height:27px; border-radius:50%; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,.25); transition:transform .25s}
+.switch input:checked+span{background:var(--green)}
+.switch input:checked+span::after{transform:translateX(20px)}
+
+.btn{border:0; border-radius:980px; padding:12px 24px; font-weight:500; background:var(--blue); color:#fff}
+.btn.ghost{background:var(--fill); color:var(--blue)}
+.btn.block{width:100%}
+.lbl{flex:none; white-space:nowrap}
+.field{flex:1; min-width:0; border:0; background:none; padding:0; outline:0; text-align:right}
+select.field{appearance:none; -webkit-appearance:none}
+.btns{display:flex; gap:10px; margin-top:18px}
+.btns .btn{flex:1}
+
+.tabbar{position:fixed; inset:auto 0 0 0; z-index:20; background:var(--glass); backdrop-filter:saturate(180%) blur(22px); -webkit-backdrop-filter:saturate(180%) blur(22px); border-top:.5px solid var(--line); padding-bottom:env(safe-area-inset-bottom)}
+.tabbar nav{max-width:520px; margin:0 auto; display:flex}
+.tab{flex:1; border:0; background:none; color:var(--sub); padding:9px 0 7px; display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10.5px; font-weight:500}
+.tab svg{width:26px; height:26px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+.tab.on{color:var(--blue)}
+
+.scrim{position:fixed; inset:0; z-index:30; background:rgba(0,0,0,.35); opacity:0; pointer-events:none; transition:opacity .3s}
+.scrim.on{opacity:1; pointer-events:auto}
+.sheet{position:fixed; left:0; right:0; bottom:0; z-index:31; max-width:520px; margin:0 auto; max-height:90dvh; overflow:auto; background:var(--bg); border-radius:26px 26px 0 0; padding:10px 20px calc(26px + env(safe-area-inset-bottom)); transform:translateY(105%); transition:transform .38s cubic-bezier(.32,.72,0,1)}
+.sheet.on{transform:none}
+.grab{width:38px; height:5px; border-radius:3px; background:var(--fill); margin:0 auto 18px}
+.sheet-head{display:flex; align-items:flex-start; justify-content:space-between; gap:12px}
+.sheet-head .acts{display:flex; gap:2px; margin-top:-4px}
+
+.wk{display:grid; grid-template-columns:22px repeat(10,1fr); gap:3px; margin-top:14px}
+.wk .h{font-size:10px; color:var(--sub); text-align:center; line-height:18px}
+.wk .d{font-size:12px; font-weight:600; display:flex; align-items:center}
+.wk .d.cur{color:var(--blue)}
+.wk i{display:block; height:28px; border-radius:7px; background:var(--busy); border:0}
+.wk i.h{height:18px; border-radius:0; background:none}
+.wk i.free{background:color-mix(in srgb,var(--green) 18%,transparent)}
+.wk i.hit{outline:2px solid var(--blue); outline-offset:1px}
+.wk i.sel{outline:2px solid var(--text); outline-offset:1px}
+.info{min-height:44px; margin-top:12px; font-size:14px; color:var(--sub)}
+.legend{display:flex; gap:14px; margin-top:6px; font-size:12px; color:var(--sub)}
+.legend s{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px; background:var(--busy); text-decoration:none}
+.legend s.f{background:color-mix(in srgb,var(--green) 30%,transparent)}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div id="app"><div id="view" class="view"></div></div>
+<div class="tabbar"><nav id="tabs"></nav></div>
+<div class="scrim" id="scrim" data-a="close"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const DATA = {"term":"2/2569","periods":["08.15-08.25","08.30-09.20","09.20-10.10","10.10-11.00","11.00-11.50","11.50-12.40","12.40-13.30","13.30-14.20","14.20-15.10","15.10-16.00"],"rooms":[{"id":"3108","name":"ญี่ปุ่น","building":"ตึก 3","floor":1,"busy":{"0":{"5":["อ32102","5/6"],"4":["อ32102","5/6"],"2":["ญ30201","5/4"],"7":["ญ30201","5/2"],"8":["ญ30201","5/3"]},"1":{"5":["ญ30201","5/5"],"7":["ญ30201","5/1"],"8":["ญ30201","5/6"],"9":["ญ30201","5/3"]},"2":{"3":["ญ30201","5/2"],"7":["ญ30201","5/6"],"8":["ญ30201","5/4"]},"3":{"1":["ญ30201","5/1"],"7":["ญ30201","5/5"]}}},{"id":"Smart1","name":"Smart 1","building":"ตึก 3","floor":1,"busy":{"0":{"4":["ง23101","3/3"],"3":["ง23101","3/3"],"7":["ง23101","3/1"],"8":["ง23101","3/1"]},"2":{"5":["ง23101","3/2"],"4":["ง23101","3/2"]},"3":{"4":["ค31104","4/6"],"1":["ค31104","4/5"],"7":["ง23101","3/4"],"8":["ง23101","3/4"]}}},{"id":"Smart2","name":"Smart 2 · สังคมศึกษา","building":"ตึก 3","floor":1,"busy":{"0":{"4":["ส33103","6/5"],"7":["ส33104","6/6"],"8":["ส33104","6/6"]},"1":{"3":["ค31104","4/5"]},"2":{"4":["ว31162","4/3"],"7":["ว31162","4/5"],"8":["ว31162","4/4"]},"3":{"6":["ว31162","4/1"],"2":["ส33103","6/6"],"8":["ว31162","4/6"],"9":["ว31162","4/2"]}}},{"id":"Smart3","name":"Smart 3 · ภาษาไทย","building":"ตึก 3","floor":1,"busy":{"0":{"3":["ท33102","6/5"],"2":["ท33102","6/2"],"1":["ท33102","6/3"],"9":["ว20271","3/1"]},"1":{"6":["ท21102","1/1"],"4":["แนะแนว","2/2"],"3":["แนะแนว","2/3"],"1":["ท21102","1/4"],"7":["ท21102","1/3"],"8":["ว20271","3/2"]},"3":{"3":["ท33102","6/6"],"2":["ท33102","6/3"],"1":["ท33102","6/4"],"9":["แนะแนว","1/3"]},"2":{"7":["แนะแนว","1/1"],"8":["ท23102","3/2"]}}},{"id":"Smart4","name":"Smart 4 · คณิตศาสตร์","building":"ตึก 3","floor":1,"busy":{"0":{"6":["ค21102","1/1"],"4":["ค21102","1/2"],"3":["ค23102","3/4"],"2":["ค23102","3/3"],"1":["ค21102","1/3"],"8":["ส32102","5/2"]},"1":{"6":["ค21102","1/2"],"4":["ค21102","1/3"],"3":["ค21102","1/4"],"1":["ค21102","1/1"],"7":["ค21202","1/1"]},"2":{"6":["ค21102","1/1"],"3":["ค23102","3/3"],"2":["ค23102","3/1"],"1":["ค21102","1/2"],"7":["ค21102","1/4"]},"3":{"4":["ค21102","1/3"],"3":["ค21202","1/1"],"1":["ค21102","1/4"],"9":["ท23102","3/3"]}}},{"id":"Smart5","name":"Smart 5 · ภาษาต่างประเทศ","building":"ตึก 3","floor":1,"busy":{"0":{"5":["อ33202","6/6"],"4":["อ33202","6/6"],"3":["อ33202","6/1"],"2":["อ33202","6/1"],"7":["อ33202","6/2"],"8":["อ33202","6/2"],"9":["อ31102","4/1"]},"1":{"6":["อ22102","2/2"],"4":["อ23102","3/3"],"2":["อ32102","5/2"],"1":["อ32102","5/2"],"7":["อ32102","5/5"],"8":["อ32102","5/4"]},"2":{"5":["อ33202","6/5"],"4":["อ33202","6/5"],"3":["อ33202","6/4"],"2":["อ33202","6/4"]},"3":{"4":["อ21102","1/1"],"9":["อ31102","4/6"]},"4":{"4":["อ33202","6/3"],"3":["อ33202","6/3"]}}},{"id":"3202","name":"คณิต 1","building":"ตึก 3","floor":2,"busy":{"0":{"6":["ค31104","4/3"],"3":["ค31104","4/2"],"7":["ค31103","4/5"]},"1":{"6":["ค31104","4/2"],"3":["ค31104","4/1"],"2":["ค31104","4/3"],"1":["ค32203","5/5"],"7":["ค23102","3/2"],"8":["ค32203","5/1"]},"2":{"6":["ค31104","4/1"],"4":["ค32203","5/2"],"3":["ค32203","5/4"],"1":["ค31104","4/3"]},"3":{"4":["ค31104","4/1"],"1":["ค31104","4/2"],"7":["ค31104","4/4"]}}},{"id":"3203","name":"คณิต 2","building":"ตึก 3","floor":2,"busy":{"0":{"6":["ค31103","4/4"],"4":["ค31103","4/1"],"2":["ค31103","4/2"],"1":["ค32203","5/1"],"7":["ค20271","2/1"]},"1":{"5":["ค32203","5/4"],"4":["ค31103","4/3"],"3":["ค23102","3/1"],"2":["ค23102","3/3"]},"2":{"4":["ค31103","4/4"],"3":["ค31103","4/1"],"2":["ค31103","4/3"],"1":["ค23102","3/4"],"7":["ค31103","4/2"]},"3":{"6":["ค31103","4/5"],"4":["ค31103","4/2"],"3":["ค31103","4/4"],"1":["ค31103","4/3"],"7":["ค31103","4/1"]}}},{"id":"3204","name":"คณิต 3","building":"ตึก 3","floor":2,"busy":{"0":{"5":["ค32202","5/5"],"4":["ค32202","5/1"],"3":["ค32202","5/2"],"2":["ค32203","5/2"],"1":["ค32202","5/4"]},"1":{"5":["ค32202","5/1"],"4":["ค32202","5/3"],"3":["ค32203","5/3"],"2":["ค32202","5/5"],"7":["ค32202","5/2"]},"2":{"5":["ค32202","5/1"],"3":["ค32202","5/3"],"2":["ค32202","5/4"],"1":["ค31103","4/5"],"7":["ค32203","5/3"]},"3":{"5":["ค32202","5/5"],"4":["ค32202","5/3"],"3":["ค32202","5/4"],"2":["ค32203","5/5"],"1":["ค32203","5/6"],"7":["ค32202","5/2"]}}},{"id":"3205","name":"คณิต 4","building":"ตึก 3","floor":2,"busy":{"0":{"6":["ค22102","2/1"],"4":["ค31103","4/6"],"3":["ค32203","5/6"],"2":["ค22102","2/3"],"1":["ค22102","2/4"]},"1":{"3":["ค22102","2/2"],"1":["ค32202","5/6"],"7":["ค22102","2/4"]},"2":{"4":["ค22102","2/1"],"2":["ค22102","2/3"],"1":["ค22102","2/2"]},"3":{"5":["ค32203","5/2"],"4":["ค32203","5/4"],"3":["ค22102","2/4"],"2":["ค22102","2/3"],"1":["ค22102","2/2"],"7":["ค22102","2/1"]}}},{"id":"3206","name":"คณิต 5","building":"ตึก 3","floor":2,"busy":{"0":{"6":["ค22202","2/2"],"5":["ค23102","3/2"],"4":["ค22202","2/1"],"3":["ค22202","2/3"],"2":["ค22202","2/4"],"7":["ค31104","4/4"]},"1":{"6":["ค31103","4/6"],"3":["ค21202","1/2"],"2":["ค21202","1/4"],"1":["ค22202","2/3"],"7":["ค22202","2/2"]},"2":{"6":["ค21202","1/3"],"4":["ค21202","1/4"],"3":["ค21202","1/2"],"2":["ค31104","4/5"]},"3":{"4":["ค22202","2/4"],"3":["ค21202","1/3"],"2":["ค32203","5/1"],"1":["ค22202","2/1"],"7":["ค32202","5/6"]}}},{"id":"3207","name":"คณิต 6","building":"ตึก 3","floor":2,"busy":{"0":{"5":["ค32203","5/3"],"2":["ค23202","3/2"],"1":["ค23202","3/1"],"7":["ค32202","5/6"]},"1":{"6":["ค31104","4/4"],"3":["ค23202","3/3"],"2":["ค23202","3/4"],"1":["ค31104","4/6"],"7":["ค32203","5/6"],"8":["ค20271","2/2"]},"2":{"6":["ค31103","4/6"],"5":["ค32203","5/5"],"4":["ค31104","4/6"],"3":["ค23202","3/2"],"2":["ค23202","3/3"],"1":["ค23202","3/1"],"7":["ค23202","3/4"]},"3":{"4":["ค23102","3/1"],"3":["ค23102","3/4"],"2":["ค23102","3/2"],"8":["ค20271","2/3"],"9":["ค20271","2/4"]}}},{"id":"3301","name":"แนะแนว","building":"ตึก 3","floor":3,"busy":{"0":{"2":["แนะแนว","6/5"],"1":["แนะแนว","6/2"],"7":["แนะแนว","3/2"]},"1":{"4":["แนะแนว","5/1"],"3":["แนะแนว","3/4"],"2":["แนะแนว","6/4"]},"2":{"4":["แนะแนว","3/3"],"3":["แนะแนว","6/1"],"1":["แนะแนว","6/3"],"7":["แนะแนว","5/4"],"8":["แนะแนว","5/5"]},"3":{"4":["แนะแนว","6/6"],"2":["แนะแนว","3/1"],"1":["แนะแนว","5/3"]},"4":{"2":["แนะแนว","5/2"],"1":["แนะแนว","5/6"]}}},{"id":"3302","name":"สังคม 1","building":"ตึก 3","floor":3,"busy":{"0":{"5":["ส32103","5/1"],"4":["ส21106","1/4"],"3":["ส21102","1/3"],"2":["ส32103","5/6"],"1":["ส32103","5/2"],"8":["อ22102","2/3"]},"1":{"6":["ส21102","1/4"],"5":["ส23102","3/1"],"4":["ส23102","3/2"],"3":["ส21102","1/3"],"2":["ส21102","1/1"],"7":["ส32103","5/4"],"8":["ส32103","5/5"]},"2":{"6":["ส21102","1/4"],"4":["ส23102","3/1"],"3":["ส23102","3/4"],"2":["ส32102","5/6"],"7":["ส23102","3/3"],"8":["ส21102","1/2"]},"3":{"6":["ส22106","2/3"],"2":["ส21102","1/2"],"7":["ม30201","อุสนา"]}}},{"id":"3303","name":"สังคม 2","building":"ตึก 3","floor":3,"busy":{"0":{"3":["ส32102","5/4"],"1":["ส33103","6/1"],"7":["ส33104","6/4"],"8":["ส33104","6/4"]},"1":{"6":["ส31101","4/1"],"4":["อ22102","2/4"],"2":["ส32103","5/6"],"7":["ส33104","6/2"],"8":["ส33104","6/2"],"9":["ส31101","4/6"]},"2":{"4":["ส31101","4/1"],"3":["อ31102","4/4"],"1":["ส33103","6/2"],"7":["ส31101","4/3"]},"3":{"6":["ส21102","1/1"],"5":["ส32103","5/3"],"7":["ส32103","5/4"],"8":["ส31101","4/2"]},"4":{"4":["ส31101","4/2"],"3":["ส31101","4/3"]}}},{"id":"3304","name":"สังคม 3","building":"ตึก 3","floor":3,"busy":{"0":{"4":["ส23102","3/2"],"8":["อ32102","5/1"]},"1":{"2":["อ21102","1/2"],"8":["ม30201","5/6"],"9":["ม30201","5/3"]},"2":{"5":["ส32103","5/2"],"4":["อ32102","5/3"],"3":["อ23202","3/1"],"1":["อ32102","5/6"],"7":["ส31101","4/4"],"8":["ส31101","4/5"]},"3":{"6":["ส31101","4/4"],"4":["อ23102","3/4"],"3":["อ23102","3/2"],"2":["ส23102","3/4"],"1":["ส23102","3/3"],"7":["ส31101","4/6"],"8":["ส32102","5/5"]},"4":{"3":["ส31101","4/5"]}}},{"id":"3305","name":"Eng 1","building":"ตึก 3","floor":3,"busy":{"0":{"4":["อ31102","4/5"],"3":["อ31102","4/6"],"1":["อ23102","3/2"],"7":["อ32102","5/4"],"8":["อ32102","5/4"]},"1":{"5":["ม30201","5/5"],"4":["อ31102","4/1"],"3":["อ31102","4/3"],"7":["ม30201","5/1"]},"2":{"3":["ม30201","5/2"],"2":["อ23102","3/2"],"1":["อ23102","3/3"],"7":["อ23102","3/1"]},"3":{"4":["อ31102","4/4"],"3":["อ21102","1/2"],"2":["อ21102","1/1"],"1":["อ33202","6/1"],"7":["อ22102","2/3"],"8":["อ32102","5/2"]}}},{"id":"3306","name":"Eng 2","building":"ตึก 3","floor":3,"busy":{"0":{"5":["อ23102","3/3"],"4":["อ23102","3/4"],"3":["อ23102","3/1"],"2":["ม30201","5/4"],"1":["อ33202","6/5"],"7":["ม30201","5/2"],"8":["ม30201","5/3"]},"1":{"6":["อ22202","2/4"],"5":["ส32102","5/3"],"3":["ส32102","5/1"]},"2":{"6":["อ31102","4/2"],"5":["อ23202","3/3"],"3":["อ31102","4/3"],"2":["อ21102","1/4"],"7":["ม30201","5/6"],"8":["ม30201","5/4"]},"3":{"6":["อ22202","2/1"],"4":["แนะแนว","4/3"],"2":["อ31102","4/5"],"1":["อ23102","3/1"],"7":["อ21202","1/3"],"8":["อ22102","2/4"]},"4":{"4":["ม20201","ม.ต้น"],"3":["ม20201","ม.ต้น"]}}},{"id":"3307","name":"Eng 3","building":"ตึก 3","floor":3,"busy":{"0":{"6":["อ21102","1/4"],"1":["แนะแนว","4/2"],"7":["อ21102","1/1"]},"1":{"5":["อ33202","6/2"],"2":["อ33202","6/6"],"1":["อ33202","6/3"],"7":["อ21102","1/4"]},"2":{"6":["อ22202","2/3"],"4":["อ22102","2/3"],"3":["อ21102","1/3"],"2":["อ21102","1/2"],"1":["อ33202","6/4"],"7":["อ21102","1/3"],"8":["อ31102","4/2"]},"3":{"6":["อ31102","4/6"],"4":["อ22102","2/1"],"3":["อ22102","2/2"],"2":["อ21202","1/4"],"1":["อ21202","1/2"],"7":["อ31102","4/2"],"8":["อ31102","4/1"],"9":["แนะแนว","4/1"]}}},{"id":"3308","name":"Eng 4","building":"ตึก 3","floor":3,"busy":{"0":{"6":["อ31102","4/5"],"4":["อ21102","1/3"],"3":["อ22102","2/1"],"2":["อ22102","2/2"],"1":["อ31102","4/4"],"7":["แนะแนว","4/6"],"8":["อ22202","2/2"],"9":["แนะแนว","4/4"]},"1":{"4":["อ23202","3/4"],"1":["อ23202","3/2"],"7":["อ23102","3/4"],"8":["อ21202","1/1"],"9":["แนะแนว","4/5"]},"2":{"6":["อ22102","2/1"],"4":["อ32102","5/5"],"3":["อ32102","5/5"],"2":["อ22102","2/4"],"8":["อ31102","4/3"]},"3":{"4":["อ32102","5/1"],"3":["อ32102","5/1"],"1":["ม30201","5/1"],"7":["อ32102","5/3"],"8":["อ32102","5/3"]}}},{"id":"3402","name":"ไทย 1","building":"ตึก 3","floor":4,"busy":{"0":{"2":["ท31102","4/3"],"1":["ท31102","4/3"]},"1":{"4":["ท23102","3/1"],"2":["ท31102","4/4"],"1":["ท31102","4/4"],"8":["แนะแนว","1/4"],"9":["แนะแนว","1/2"]},"2":{"4":["ท21102","1/2"],"3":["ท21102","1/4"],"2":["ท31102","4/6"],"1":["ท31102","4/6"],"7":["ท31102","4/1"],"8":["ท31102","4/1"]},"3":{"5":["ท23102","3/2"],"3":["ท31102","4/2"],"2":["ท31102","4/2"],"7":["ท31102","4/5"],"8":["ท31102","4/5"]}}},{"id":"3403","name":"ไทย 2","building":"ตึก 3","floor":4,"busy":{"0":{"5":["ท23102","3/4"],"3":["ท21102","1/1"],"1":["ท21102","1/4"],"7":["ท21102","1/3"]},"1":{"4":["ท21102","1/2"],"3":["ท33102","6/4"],"2":["ท33102","6/2"],"1":["ท33102","6/1"],"8":["ท23102","3/4"]},"2":{"3":["ท33102","6/5"],"2":["ท33102","6/1"],"1":["ท33102","6/6"]},"3":{"6":["ท21102","1/3"],"3":["ท23102","3/1"],"1":["ท21102","1/1"],"7":["ท21102","1/2"]}}},{"id":"3404","name":"ไทย 3","building":"ตึก 3","floor":4,"busy":{"0":{"4":["ท32102","5/5"],"3":["ท32102","5/5"]},"1":{"2":["ท32102","5/3"],"1":["ท32102","5/3"]},"2":{"5":["ท32102","5/4"],"4":["ท32102","5/4"],"2":["ท23102","3/4"],"7":["ท32102","5/1"],"8":["ท32102","5/1"]},"3":{"5":["ท32102","5/6"],"4":["ท32102","5/6"],"2":["ท32102","5/2"],"1":["ท32102","5/2"]}}},{"id":"3405","name":"ไทย 4","building":"ตึก 3","floor":4,"busy":{"0":{"6":["ท22102","2/4"],"3":["ท22102","2/2"],"2":["ท22102","2/1"],"7":["แนะแนว","2/4"]},"1":{"2":["ท22102","2/3"],"1":["ท22102","2/4"]},"2":{"6":["ท22102","2/4"],"3":["ท22102","2/1"],"2":["ท22102","2/2"],"1":["ท22102","2/3"]},"3":{"3":["ท22102","2/1"],"2":["ท22102","2/2"],"1":["ท22102","2/3"]}}},{"id":"3406","name":"สังคม 4","building":"ตึก 3","floor":4,"busy":{"0":{"3":["ท23102","3/2"],"2":["ท23102","3/1"],"1":["ท23102","3/3"],"7":["ส22106","2/2"]},"1":{"1":["ท23102","3/3"]},"2":{"3":["ส22102","2/3"],"2":["ส22102","2/1"],"1":["ส22102","2/4"],"7":["ส32103","5/5"],"8":["ส32103","5/3"]},"3":{"4":["ส23106","3/2"],"8":["ส32103","5/1"]}}},{"id":"3407","name":"สังคม 5","building":"ตึก 3","floor":4,"busy":{"0":{"2":["ส21106","1/3"],"1":["ส21106","1/2"]},"1":{"4":["ส21106","1/1"],"3":["ส22106","2/1"],"2":["ส22106","2/4"],"1":["ส23106","3/4"],"7":["ส33104","6/3"],"8":["ส33104","6/3"]},"2":{"1":["แนะแนว","2/1"]},"3":{"3":["ส23106","3/3"],"2":["ส22102","2/1"]}}},{"id":"3408","name":"สังคม 6","building":"ตึก 3","floor":4,"busy":{"0":{"4":["ส22102","2/2"],"1":["ส22102","2/3"],"7":["ส33104","6/5"],"8":["ส33104","6/5"]},"1":{"3":["ส22102","2/4"],"2":["ส33103","6/3"],"1":["ส33103","6/4"],"7":["ส33104","6/1"],"8":["ส33104","6/1"]},"2":{"6":["ส22102","2/2"],"8":["ส23106","3/1"]}}},{"id":"L1","name":"เสม็ดขาว","building":"อาคารอื่น","floor":0,"busy":{"0":{"5":["ท30214","6/1,2"],"4":["ส30283","6/3,4"],"3":["อ30204","6/3,4"]},"1":{"5":["ท30214","6/5.6"],"4":["ส30283","6/1,2"],"3":["อ30204","6/5,6"],"1":["ส30283","6/5,6"]},"2":{"5":["อ30204","6/1,2"]},"3":{"5":["ท30214","6/3,4"]}}}],"timetable":{"name":"ม.6/3","busy":{"0":{"0":{"title":"กิจกรรมโฮมรูม"},"1":{"title":"ท33102","room":"Smart3"},"4":{"title":"ส30283","room":"L1"},"7":{"title":"พ33102","place":"ยิม 2"}},"1":{"0":{"title":"กิจกรรมโฮมรูม"},"1":{"title":"อ33202","room":"3307"},"2":{"title":"ส33103","room":"3408"},"7":{"title":"ส33104","room":"3407"},"8":{"title":"ส33104","room":"3407"}},"2":{"0":{"title":"กิจกรรมโฮมรูม"},"1":{"title":"แนะแนว","room":"3301"},"7":{"title":"เพิ่มเติม กลุ่ม 2"},"8":{"title":"เพิ่มเติม กลุ่ม 2"}},"3":{"0":{"title":"กิจกรรมโฮมรูม"},"1":{"title":"ศ33102","place":"ลานศิลป์"},"2":{"title":"ท33102","room":"Smart3"},"4":{"title":"ว33141","place":"LabB1"},"5":{"title":"ท30214","room":"L1"},"7":{"title":"ว33121","place":"เคมี"},"8":{"title":"ว33101","place":"ฟิสิกส์"}},"4":{"0":{"title":"กิจกรรมโฮมรูม"},"3":{"title":"อ33202","room":"Smart5"},"4":{"title":"อ33202","room":"Smart5"},"7":{"title":"เพิ่มเติม กลุ่ม 2"},"8":{"title":"เพิ่มเติม กลุ่ม 2"},"9":{"title":"กิจกรรมชุมนุม"}}}}};
+
+/* ---------- ค่าคงที่และตัวช่วย ---------- */
+const DAY_NAMES = ["จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์"];
+const DAY_SHORT = ["จ.","อ.","พ.","พฤ.","ศ."];
+const MAX_P = 9;
+const toMin = s => { const [h, m] = s.split(".").map(Number); return h * 60 + m; };
+const PER = DATA.periods.map(s => { const [a, b] = s.split("-"); return {start: toMin(a), end: toMin(b)}; });
+const fmt = m => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const $ = s => document.querySelector(s);
+const ROOMS = DATA.rooms;
+const R = Object.fromEntries(ROOMS.map(r => [r.id, r]));
+
+const ICON = {
+  now: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
+  mine: '<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  settings: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+  star: '<path d="M12 3.5l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1-5.4-3-5.4 3 1.1-6.1-4.5-4.3 6.1-.8z"/>',
+  eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeoff: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+};
+const svg = (k, cls = "") => `<svg class="${cls}" viewBox="0 0 24 24">${ICON[k]}</svg>`;
+const CHEV = '<svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>';
+
+/* ---------- เวลาไทย ---------- */
+const TZ_PARTS = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Bangkok", weekday: "short", year: "numeric", month: "2-digit", day: "2-digit",
+  hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+});
+const TZ_LABEL = new Intl.DateTimeFormat("th-TH", {timeZone: "Asia/Bangkok", weekday: "long", day: "numeric", month: "short"});
+function bkk() {
+  const q = new URLSearchParams(location.search).get("now");   // ?now=2026-11-09T09:30 ไว้ทดสอบ
+  const d = q ? new Date(/(Z|[+-]\d\d:?\d\d)$/i.test(q) ? q : q + "+07:00") : new Date();
+  const p = Object.fromEntries(TZ_PARTS.formatToParts(d).map(x => [x.type, x.value]));
+  const day = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].indexOf(p.weekday);
+  return {day, min: +p.hour * 60 + +p.minute, date: `${p.year}-${p.month}-${p.day}`, label: TZ_LABEL.format(d), fixed: !!q};
+}
+const fmtDur = m => m < 60 ? `${m} นาที` : `${Math.floor(m / 60)} ชม.` + (m % 60 ? ` ${m % 60} นาที` : "");
+
+/* ---------- สถานะที่เก็บในเครื่อง ---------- */
+const KEY = "avail.v1";
+// skip = ห้องที่กด "ใช้ไม่ได้" วันนี้ · hist = นับครั้งที่ห้องถูกข้ามแต่ละ (วัน-คาบ) · ovr = แก้ตารางเฉพาะวันนี้ · rest = คาบพักที่ไม่ต้องแนะนำ
+function load() {
+  const def = () => ({my: clone(DATA.timetable.busy), fav: [], hide: [], floor: null, smart: false, rest: [], hist: {}, skip: null, ovr: null, theme: "auto", lowFirst: true});
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && s.my) return Object.assign(def(), s);
+  } catch (e) {}
+  return def();
+}
+let S = load();
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+/* ---------- ธีม: auto = ตามเครื่อง · light · dark ---------- */
+function applyTheme() {
+  const root = document.documentElement;
+  if (S.theme === "light" || S.theme === "dark") root.dataset.theme = S.theme; else delete root.dataset.theme;
+  const bg = getComputedStyle(root).getPropertyValue("--bg").trim();
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta && bg) meta.content = bg;
+}
+applyTheme();
+if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (S.theme === "auto") applyTheme(); });
+
+/* ---------- ชื่อห้อง ---------- */
+const isNum = r => /^\d/.test(r.id);
+const roomTitle = r => isNum(r) ? r.id : r.id.startsWith("Smart") ? "Smart " + r.id.slice(5) : r.name;
+const where = r => r.floor ? `${r.building} ชั้น ${r.floor}` : r.building;
+const roomSub = r => {
+  const extra = isNum(r) ? r.name : (r.name.split("·")[1] || "").trim();
+  return [extra, where(r)].filter(Boolean).join(" · ");
+};
+const slotRoom = it => it && it.room ? roomTitle(R[it.room]) : (it && it.place) || "";
+
+/* ---------- ตารางของฉัน: ช่วงว่าง ---------- */
+const base = (d, p) => S.my[d] && S.my[d][p];       // ตารางหลัก
+function ovrToday(d) {                              // ค่าที่แก้เฉพาะวันนี้ (หมดอายุเมื่อเปลี่ยนวัน)
+  const t = bkk();
+  return S.ovr && S.ovr.date === t.date && t.day === d ? S.ovr.p : null;
+}
+function mine(d, p) {                               // ตารางที่ใช้จริง = ตารางหลัก + แก้เฉพาะวันนี้
+  const o = ovrToday(d);
+  if (o && o[p] !== undefined) return o[p] ? {title: "ไม่ว่าง (เฉพาะวันนี้)", today: true} : null;
+  return base(d, p);
+}
+const isRest = p => S.rest.includes(p);
+const skippedToday = id => !!(S.skip && S.skip.date === bkk().date && S.skip.ids.includes(id));
+function freeSpans(day, from = 1) {
+  const out = []; let s = null;
+  for (let p = from; p <= MAX_P; p++) {
+    const free = !mine(day, p) && !isRest(p);
+    if (free && s === null) s = p;
+    if (!free && s !== null) { out.push([s, p - 1]); s = null; }
+  }
+  if (s !== null) out.push([s, MAX_P]);
+  return out;
+}
+
+/* ---------- ระบบแนะนำห้อง ---------- */
+function closeness(a, b) {                     // -1 = ห้องเดียวกัน, 0 = ชั้นเดียวกัน, 1.. = ห่างกี่ชั้น, 9 = คนละตึก
+  if (!a || !b) return null;
+  if (a.id === b.id) return -1;
+  return a.building === b.building ? Math.abs(a.floor - b.floor) : 9;
+}
+function recommend(day, s, e) {
+  const prev = mine(day, s - 1), next = mine(day, e + 1);
+  const pr = prev && prev.room && R[prev.room], nr = next && next.room && R[next.room];
+  const len = e - s + 1, out = [];
+  for (const r of ROOMS) {
+    if (S.hide.includes(r.id) || skippedToday(r.id)) continue;
+    let k = 0;
+    while (s + k <= e && !(r.busy[day] && r.busy[day][s + k])) k++;
+    if (!k) continue;
+    let score = k * 10; const why = [];
+    why.push(k === len ? (len === 1 ? "ว่างตลอดคาบ" : `ว่างครบ ${len} คาบ`) : `ว่าง ${k} จาก ${len} คาบ`);
+    if (k === len) score += 15;
+    const dn = closeness(r, nr), dp = closeness(r, pr);
+    if (dn === -1) { score += 10; why.push("ห้องเดียวกับคาบถัดไป"); }
+    else if (dn === 0) { score += 8; why.push(`ชั้นเดียวกับคาบถัดไป (${roomTitle(nr)})`); }
+    else if (dn === 1) { score += 4; why.push("ชั้นติดกับคาบถัดไป"); }
+    if (dp === 0) { score += 4; why.push(`ใกล้ห้องคาบก่อน (${roomTitle(pr)})`); }
+    if (S.fav.includes(r.id)) { score += 12; why.push("ห้องโปรด"); }
+    if (S.floor && r.floor === S.floor && r.building === "ตึก 3") { score += 6; why.push(`ชั้น ${S.floor} ที่ชอบ`); }
+    if (S.smart && r.id.startsWith("Smart")) { score += 5; why.push("ห้อง Smart"); }
+    const bad = (S.hist[r.id] && S.hist[r.id][day + "-" + s]) || 0;   // เคยกด "ใช้ไม่ได้" ช่วงเวลานี้กี่ครั้ง
+    if (bad) { score -= Math.min(bad, 3) * 8; why.push(`เคยใช้ไม่ได้ช่วงนี้ ${bad} ครั้ง`); }
+    out.push({r, k, len, score, why, until: PER[s + k - 1].end});
+  }
+  const byId = (a, b) => (a.r.id < b.r.id ? -1 : 1);
+  if (!S.lowFirst) return out.sort((a, b) => b.score - a.score || byId(a, b));
+  // ชั้นล่างก่อน: ว่างได้นานกว่าขึ้นก่อน -> ชั้นที่ชอบ -> ชั้นล่าง (ห้องนอกตึกอยู่ท้าย) -> คะแนนอื่น ๆ
+  const liked = x => (S.floor && x.r.building === "ตึก 3" && x.r.floor === S.floor ? 0 : 1);
+  const lvl = x => (x.r.building === "ตึก 3" ? x.r.floor : 9);
+  return out.sort((a, b) => b.k - a.k || liked(a) - liked(b) || lvl(a) - lvl(b) || b.score - a.score || byId(a, b));
+}
+
+/* ---------- สถานะ "ตอนนี้" ---------- */
+function nextSpan(fromDay, t) {                 // ช่วงว่างแรกของวันเรียนถัดไป
+  let d = fromDay;
+  for (let i = 0; i < 7; i++) {
+    d = (d + 1) % 7;
+    if (d > 4) continue;
+    const sp = freeSpans(d)[0];
+    if (sp) return {day: d, s: sp[0], e: sp[1], tomorrow: d === (t.day + 1) % 7};
+  }
+  return null;
+}
+function nowState(t) {
+  const {day, min} = t;
+  if (day > 4 || min >= PER[MAX_P].end) return {kind: "closed", next: nextSpan(day > 4 ? 4 : day, t)};
+  let p = 1, inClass = true;
+  if (min < PER[1].start) inClass = false;
+  else for (let i = 1; i <= MAX_P; i++) if (min < PER[i].end) { p = i; break; }
+  const item = mine(day, p) || (isRest(p) ? {title: "ช่วงพัก", rest: true} : null);
+  if (item) {
+    const sp = freeSpans(day, p + 1)[0];
+    return {kind: "busy", p, item, left: PER[p].end - min,
+            next: sp ? {day, s: sp[0], e: sp[1], today: true} : nextSpan(day, t)};
+  }
+  const sp = freeSpans(day, p)[0];
+  return {kind: "free", p, inClass, span: {day, s: p, e: sp[1]}};
+}
+
+/* ---------- view: ตอนนี้ ---------- */
+const spanText = (a, b) => b > a ? `คาบ ${a}–${b}` : `คาบ ${a}`;
+const timeText = (a, b) => `${fmt(PER[a].start)}–${fmt(PER[b].end)} น.`;
+
+const dayWord = n => n.tomorrow ? "พรุ่งนี้" : "วัน" + DAY_NAMES[n.day];
+const nextTitle = n => `${dayWord(n)} · ${spanText(n.s, n.e)} · ${timeText(n.s, n.e)}`;
+const ctxAttr = spec => `data-day="${spec.day}" data-s="${spec.s}" data-e="${spec.e}"`;
+
+function recsHtml(spec, title) {
+  if (!spec) return `<div class="card empty" style="margin-top:26px">ไม่มีคาบว่างในตารางของคุณ</div>`;
+  const list = recommend(spec.day, spec.s, spec.e);
+  const top = list.slice(0, 3);
+  let h = `<p class="eyebrow" style="margin:26px 4px 10px">${esc(title)}</p>`;
+  if (!top.length) {
+    h += `<div class="card empty">ไม่มีห้องไหนว่างในช่วงนี้</div>`;
+  } else {
+    const m = top[0], ctx = ctxAttr(spec);
+    h += `<div class="card rec">
+      <button class="rec-main" data-a="room" data-id="${m.r.id}" ${ctx}>
+        <div class="room-num">${esc(roomTitle(m.r))}</div>
+        <div class="room-sub">${esc(roomSub(m.r))}</div>
+        <div class="until"><i class="dot"></i>ว่างถึง ${fmt(m.until)} น.</div>
+        <div class="why">${esc(m.why.join(" · "))}</div>
+      </button>
+      <div class="rec-actions"><button class="chip" data-a="skip" data-id="${m.r.id}" ${ctx}>${svg("x")}ห้องนี้ใช้ไม่ได้</button></div></div>`;
+    if (top.length > 1) {
+      h += `<div class="group" style="margin-top:12px">` + top.slice(1).map(x => `
+        <div class="row">
+          <button class="grow row-main" data-a="room" data-id="${x.r.id}" ${ctx}><div class="t">${esc(roomTitle(x.r))}</div><div class="s">${esc(x.why.join(" · "))}</div></button>
+          <div class="end">ถึง ${fmt(x.until)}</div>
+          <button class="ibtn" data-a="skip" data-id="${x.r.id}" ${ctx} aria-label="ห้องนี้ใช้ไม่ได้">${svg("x")}</button>
+        </div>`).join("") + `</div>`;
+    }
+  }
+  h += `<button class="link" data-a="seeAll" ${ctxAttr(spec)}>ดูห้องว่างทั้งหมด (${list.length} ห้อง)</button>`;
+  return h;
+}
+
+function nowView() {
+  const t = bkk(), st = nowState(t);
+  let head, sub = "", extra = "", spec = null, title = "";
+
+  if (st.kind === "busy") {
+    const it = st.item, started = t.min >= PER[st.p].start;
+    const detail = it.rest ? "ช่วงพัก" : [it.title, slotRoom(it)].filter(Boolean).join(" · ");
+    const nextAt = st.next && st.next.today ? ` · ว่างต่อ ${fmt(PER[st.next.s].start)} น.` : "";
+    head = it.rest ? `พักอีก ${fmtDur(st.left)}` : started ? `เรียนอีก ${fmtDur(st.left)}` : `เริ่มเรียน ${fmt(PER[st.p].start)} น.`;
+    sub = detail + nextAt;
+    if (it.today) extra = `<button class="link" data-a="todayClear" data-p="${st.p}">ยกเลิกการแก้เฉพาะวันนี้</button>`;
+    else if (!it.rest && started) extra = `<button class="link" data-a="todaySet" data-p="${st.p}" data-v="0">คาบนี้ไม่มีเรียนวันนี้ (ครูไม่มา?)</button>`;
+    if (st.next) {
+      spec = st.next;
+      title = "คาบว่างถัดไป · " + (st.next.today ? `${spanText(st.next.s, st.next.e)} · ${timeText(st.next.s, st.next.e)}` : nextTitle(st.next));
+    }
+  } else if (st.kind === "free") {
+    const sp = st.span, end = PER[sp.e].end;
+    head = st.inClass ? `<i class="dot"></i>ว่างอีก ${fmtDur(end - t.min)}` : "ยังไม่เริ่มคาบแรก";
+    sub = `ถึง ${fmt(end)} น. · ${spanText(sp.s, sp.e)}`;
+    if (ovrToday(t.day) && ovrToday(t.day)[st.p] !== undefined) extra = `<button class="link" data-a="todayClear" data-p="${st.p}">ยกเลิกการแก้เฉพาะวันนี้</button>`;
+    spec = sp;
+    title = st.inClass ? `ตอนนี้ – ${fmt(end)} น.` : `${spanText(sp.s, sp.e)} · ${timeText(sp.s, sp.e)}`;
+  } else {
+    const n = st.next;
+    head = t.day > 4 ? "วันหยุด" : "เลิกเรียนแล้ว";
+    sub = n ? `คาบว่างแรก ${dayWord(n)} · ${spanText(n.s, n.e)} · ${timeText(n.s, n.e)}` : "ตารางของคุณแน่นทุกคาบ";
+    if (n) { spec = n; title = nextTitle(n); }
+  }
+  const safeHead = st.kind === "free" && st.inClass ? head : esc(head);
+  return `<p class="eyebrow" style="margin:30px 4px 0">${esc(t.label)} · ${fmt(t.min)} น.</p>
+    <h1 class="status">${safeHead}</h1><p class="sub">${esc(sub)}</p>${extra}${recsHtml(spec, title)}`;
+}
+
+/* ---------- view: ค้นหา ---------- */
+const Q = {day: 0, a: 1, b: 1};
+function initQ() {                              // ค่าเริ่มต้น = คาบที่ว่างตอนนี้ (หรือคาบว่างถัดไป) คาบเดียว
+  const st = nowState(bkk());
+  const sp = st.kind === "free" ? st.span : st.next;
+  if (sp) { Q.day = sp.day; Q.a = Q.b = sp.s; }
+}
+initQ();
+const freeUntil = (r, day, p) => {              // ห้องนี้ว่างต่อเนื่องจากคาบ p ถึงกี่โมง
+  let k = 0;
+  while (p + k <= MAX_P && !(r.busy[day] && r.busy[day][p + k])) k++;
+  return PER[p + k - 1].end;
+};
+
+function searchView() {
+  const spans = freeSpans(Q.day);
+  const res = ROOMS.filter(r => !S.hide.includes(r.id) && Array.from({length: Q.b - Q.a + 1}, (_, i) => Q.a + i).every(p => !(r.busy[Q.day] && r.busy[Q.day][p])));
+  const groups = [];
+  for (const r of res) {
+    const key = where(r);
+    let g = groups.find(x => x.key === key);
+    if (!g) groups.push(g = {key, rooms: []});
+    g.rooms.push(r);
+  }
+  const pills = Array.from({length: MAX_P}, (_, i) => i + 1).map(p => {
+    const cls = p >= Q.a && p <= Q.b ? (p === Q.a || p === Q.b ? "on" : "mid") : "";
+    return `<button class="pill ${cls}" data-a="per" data-p="${p}"><b>${p}</b><small>${fmt(PER[p].start)}</small></button>`;
+  }).join("");
+  const chips = spans.length ? spans.map(([a, b]) => `<button class="chip ${a === Q.a && b === Q.b ? "on" : ""}" data-a="span" data-s="${a}" data-e="${b}">${spanText(a, b)}</button>`).join("") : `<span class="small">ไม่มีคาบว่างในวันนี้</span>`;
+  return `<h1 class="large">ห้องว่าง</h1><p class="sub">ห้องที่ว่างตลอดช่วงที่เลือก</p>
+    <div class="seg" id="qday">${DAY_SHORT.map((d, i) => `<button class="${i === Q.day ? "on" : ""}" data-a="qday" data-d="${i}">${d}</button>`).join("")}</div>
+    <div class="pills">${pills}</div>
+    <p class="small">แตะคาบเริ่มต้น แล้วแตะคาบสุดท้ายเพื่อเลือกช่วง</p>
+    <div class="gh">คาบว่างของฉัน</div><div class="chips">${chips}</div>
+    <h2 class="sec" style="margin-top:30px">${res.length} ห้องว่าง</h2>
+    <p class="sub">${spanText(Q.a, Q.b)} · ${timeText(Q.a, Q.b)}</p>
+    ${res.length ? groups.map(g => `<div class="gh">${esc(g.key)}</div><div class="group">${g.rooms.map(r => `
+      <button class="row" style="${skippedToday(r.id) ? "opacity:.5" : ""}" data-a="room" data-id="${r.id}" data-day="${Q.day}" data-s="${Q.a}" data-e="${Q.b}">
+        <div class="grow"><div class="t">${esc(roomTitle(r))}</div><div class="s">${esc(roomSub(r))}</div></div>
+        <span class="end">${skippedToday(r.id) ? "ข้ามวันนี้" : "ว่างถึง " + fmt(freeUntil(r, Q.day, Q.a))}</span>${S.fav.includes(r.id) ? `<span class="ibtn on">${svg("star", "star")}</span>` : ""}${CHEV}</button>`).join("")}</div>`).join("")
+      : `<div class="card empty" style="margin-top:14px">ไม่มีห้องไหนว่างตลอดช่วงนี้<br>ลองเลือกช่วงที่สั้นลง</div>`}`;
+}
+
+/* ---------- view: ตารางของฉัน (ตารางจริง: แถว=คาบ คอลัมน์=วัน แตะช่องเพื่อแก้) ---------- */
+function mineView() {
+  const t = bkk(), st = nowState(t);
+  const curP = st.kind === "closed" ? -1 : st.p;
+  let grid = '<i></i>' + DAY_SHORT.map((d, i) => `<b class="th ${i === t.day ? "cur" : ""}">${d}</b>`).join("");
+  for (let p = 0; p <= MAX_P; p++) {
+    const per = DATA.periods[p].split("-")[0].replace(".", ":");
+    grid += `<div class="tp ${p === curP ? "cur" : ""}"><b>${p}</b><small>${per}</small></div>`;
+    for (let d = 0; d < 5; d++) {
+      const it = mine(d, p), o = ovrToday(d), ov = !!(o && o[p] !== undefined);
+      const txt = it ? `<b>${esc(it.today ? "ไม่ว่าง" : it.title)}</b><small>${esc(slotRoom(it))}</small>`
+        : ov ? "<small>ว่างวันนี้</small>" : isRest(p) ? "<small>พัก</small>" : "";
+      grid += `<button class="tc ${it ? "busy" : ""} ${ov ? "ov" : ""}" data-a="edit" data-d="${d}" data-p="${p}" aria-label="วัน${DAY_NAMES[d]} คาบ ${p}">${txt}</button>`;
+    }
+  }
+  return `<h1 class="large">ตารางของฉัน</h1><p class="sub">${esc(DATA.timetable.name)} · ภาคเรียน ${esc(DATA.term)} · แตะช่องเพื่อแก้</p>
+    <div class="tt">${grid}</div>
+    <p class="small" style="margin:14px 4px 0">ช่องเส้นประ = แก้เฉพาะวันนี้ · ช่องสีเทา = ว่าง</p>
+    <button class="link" data-a="resetMy">คืนค่าตารางตั้งต้น (${esc(DATA.timetable.name)})</button>`;
+}
+
+/* ---------- view: ตั้งค่า ---------- */
+function settingsView() {
+  const floors = [null, 1, 2, 3, 4].map(f => `<button class="chip ${S.floor === f ? "on" : ""}" data-a="floor" data-f="${f ?? ""}">${f ? "ชั้น " + f : "ไม่ระบุ"}</button>`).join("");
+  const groups = [];
+  for (const r of ROOMS) {
+    const key = where(r);
+    let g = groups.find(x => x.key === key);
+    if (!g) groups.push(g = {key, rooms: []});
+    g.rooms.push(r);
+  }
+  const themes = [["auto", "อัตโนมัติ"], ["light", "สว่าง"], ["dark", "มืด"]];
+  return `<h1 class="large">ตั้งค่า</h1><p class="sub">ปรับให้ห้องแนะนำตรงใจ</p>
+    <div class="group"><label class="row"><div class="grow"><div class="t n">ชั้นล่างก่อน</div><div class="s">แนะนำห้องชั้น 1 ก่อน แล้วค่อยขึ้นชั้นบน</div></div>
+      <span class="switch"><input type="checkbox" data-c="lowfirst" ${S.lowFirst ? "checked" : ""}><span></span></span></label></div>
+    <div class="gh">ชั้นที่ชอบ (ถ้าเลือก จะขึ้นก่อนเสมอ)</div><div class="chips">${floors}</div>
+    <div class="gap"></div>
+    <div class="group"><label class="row"><div class="grow"><div class="t n">ชอบห้อง Smart</div><div class="s">ให้ห้อง Smart 1–5 ได้คะแนนเพิ่ม</div></div>
+      <span class="switch"><input type="checkbox" data-c="smart" ${S.smart ? "checked" : ""}><span></span></span></label></div>
+    <div class="gh">ช่วงพัก (ไม่แนะนำห้อง)</div>
+    <div class="chips">${Array.from({length: MAX_P}, (_, i) => i + 1).map(p => `<button class="chip ${S.rest.includes(p) ? "on" : ""}" data-a="rest" data-p="${p}">${p}</button>`).join("")}</div>
+    <p class="small" style="margin:6px 4px 0">เลือกคาบที่ไม่อยากให้แนะนำห้อง เช่น พักเที่ยง คาบนั้นจะถือเป็นช่วงพักและข้ามไป</p>
+    <h2 class="sec">ห้อง</h2><p class="sub">ดาว = ห้องโปรด · ตา = ซ่อนห้องจากการแนะนำและค้นหา</p>
+    ${groups.map(g => `<div class="gh">${esc(g.key)}</div><div class="group">${g.rooms.map(r => `
+      <div class="row" style="${S.hide.includes(r.id) ? "opacity:.45" : ""}">
+        <button class="grow row" style="padding:0;border:0;min-height:0" data-a="room" data-id="${r.id}"><div class="grow"><div class="t n">${esc(roomTitle(r))}</div><div class="s">${esc(roomSub(r))}</div></div></button>
+        <button class="ibtn ${S.fav.includes(r.id) ? "on" : ""}" data-a="fav" data-id="${r.id}" aria-label="ห้องโปรด">${svg("star", "star")}</button>
+        <button class="ibtn ${S.hide.includes(r.id) ? "on hd" : ""}" data-a="hide" data-id="${r.id}" aria-label="ซ่อนห้อง">${svg(S.hide.includes(r.id) ? "eyeoff" : "eye")}</button>
+      </div>`).join("")}</div>`).join("")}
+    <div class="gh">การข้ามห้อง</div>
+    <p class="small" style="margin:0 4px">แอปจำว่าห้องไหนกด "ใช้ไม่ได้" บ่อยในช่วงเวลาเดิม แล้วลดอันดับห้องนั้นให้เอง (${Object.values(S.hist).reduce((n, h) => n + Object.keys(h).length, 0)} ช่วงที่จำไว้)</p>
+    <button class="link" data-a="clearHist">ล้างห้องที่ข้ามไว้และประวัติ</button>
+    <div class="group" style="margin-top:28px"><div class="row" style="min-height:48px"><div class="grow s" style="font-size:15px">หน้าตา</div>
+      <div class="seg seg-sm">${themes.map(([v, name]) => `<button class="${S.theme === v ? "on" : ""}" data-a="theme" data-v="${v}">${name}</button>`).join("")}</div></div></div>
+    <p class="small" style="margin:24px 4px 0">ข้อมูลห้อง ภาคเรียน ${esc(DATA.term)} จากตารางการใช้ห้องเรียน (23-10-69) · ค่าที่ตั้งเก็บไว้ในเครื่องนี้เท่านั้น</p>`;
+}
+
+/* ---------- ชีต (bottom sheet) ---------- */
+let sheetFn = null, sheetInfo = null;
+function openSheet(fn) { sheetFn = fn; renderSheet(); $("#scrim").classList.add("on"); requestAnimationFrame(() => { if (sheetFn) $("#sheet").classList.add("on"); }); }
+function closeSheet() { sheetFn = null; sheetInfo = null; $("#scrim").classList.remove("on"); $("#sheet").classList.remove("on"); }
+function renderSheet() { if (sheetFn) $("#sheet").innerHTML = `<div class="grab"></div>` + sheetFn(); }
+
+function roomSheet(id, ctx) {
+  return () => {
+    const r = R[id], today = bkk().day;
+    const fav = S.fav.includes(id), hid = S.hide.includes(id);
+    const hdr = '<i class="h"></i>' + Array.from({length: MAX_P + 1}, (_, p) => `<i class="h">${p}</i>`).join("");
+    let grid = "";
+    for (let d = 0; d < 5; d++) {
+      grid += `<span class="d ${d === today ? "cur" : ""}">${DAY_SHORT[d]}</span>`;
+      for (let p = 0; p <= MAX_P; p++) {
+        const busy = r.busy[d] && r.busy[d][p];
+        const hit = ctx && ctx.day === d && p >= ctx.s && p <= ctx.e;
+        const sel = sheetInfo && sheetInfo.d === d && sheetInfo.p === p;
+        grid += `<i class="${busy ? "" : "free"} ${hit ? "hit" : ""} ${sel ? "sel" : ""}" data-a="cell" data-d="${d}" data-p="${p}"></i>`;
+      }
+    }
+    let info = "แตะช่องเพื่อดูว่าใครใช้";
+    if (sheetInfo) {
+      const c = r.busy[sheetInfo.d] && r.busy[sheetInfo.d][sheetInfo.p];
+      info = `วัน${DAY_NAMES[sheetInfo.d]} คาบ ${sheetInfo.p} (${DATA.periods[sheetInfo.p].replace("-", "–")}) · ` + (c ? esc(c.join(" · ")) : "ว่าง");
+    }
+    return `<div class="sheet-head"><div><h3>${esc(roomTitle(r))}</h3><p class="sub">${esc(roomSub(r))}</p></div>
+      <div class="acts"><button class="ibtn ${fav ? "on" : ""}" data-a="fav" data-id="${id}" aria-label="ห้องโปรด">${svg("star", "star")}</button>
+      <button class="ibtn ${hid ? "on hd" : ""}" data-a="hide" data-id="${id}" aria-label="ซ่อนห้อง">${svg(hid ? "eyeoff" : "eye")}</button></div></div>
+      <div class="card" style="margin-top:16px;padding:16px 14px 14px"><div class="wk">${hdr}${grid}</div>
+      <div class="legend"><span><s class="f"></s>ว่าง</span><span><s></s>มีคนใช้</span>${ctx ? '<span style="color:var(--blue)">▭ ช่วงที่เลือก</span>' : ""}</div></div>
+      <div class="info">${info}</div>
+      ${skippedToday(id)
+        ? `<button class="btn ghost block" data-a="unskip" data-id="${id}">ยกเลิกการข้ามห้องนี้</button>`
+        : `<button class="btn ghost block" data-a="skip" data-id="${id}" ${ctx ? ctxAttr(ctx) : ""}>ห้องนี้ใช้ไม่ได้วันนี้</button>`}`;
+  };
+}
+
+function editSheet(d, p) {
+  return () => {
+    const it = base(d, p) || null;            // แก้ตารางหลักเสมอ (การแก้เฉพาะวันนี้อยู่ส่วนบน)
+    const t = bkk(), eff = mine(d, p), o = ovrToday(d);
+    const todaySec = t.day !== d ? "" : `<div class="gh">แค่วันนี้</div><div class="group">
+        ${o && o[p] !== undefined ? `<button class="row" data-a="todayClear" data-p="${p}"><div class="grow t n">ยกเลิกการแก้เฉพาะวันนี้</div></button>` : ""}
+        <button class="row" data-a="todaySet" data-p="${p}" data-v="${eff ? 0 : 1}"><div class="grow t n">${eff ? "วันนี้คาบนี้ว่าง (ไม่มีเรียน)" : "วันนี้คาบนี้ไม่ว่าง"}</div></button></div>
+      <p class="small" style="margin:8px 4px 0">มีผลเฉพาะวันนี้ พรุ่งนี้กลับเป็นตารางเดิม</p>
+      <div class="gh" style="margin-top:26px">แก้ตารางหลัก</div>`;
+    const opts = `<option value="">ไม่ระบุห้อง</option>` + ROOMS.map(r => `<option value="${r.id}" ${it && it.room === r.id ? "selected" : ""}>${esc(roomTitle(r))}</option>`).join("");
+    return `<h3>วัน${DAY_NAMES[d]} · คาบ ${p}</h3><p class="sub">${DATA.periods[p].replace("-", "–")} น.</p>
+      ${todaySec}
+      <div class="group" style="margin-top:${todaySec ? 0 : 16}px"><label class="row"><div class="grow t n">มีเรียน / ไม่ว่าง</div>
+        <span class="switch"><input type="checkbox" id="e-busy" data-c="ebusy" ${it ? "checked" : ""}><span></span></span></label></div>
+      <div class="group ${it ? "" : "hide"}" id="e-fields">
+        <label class="row"><span class="lbl">วิชา</span><input class="field" id="e-title" placeholder="เช่น ค31104" value="${esc(it && it.title)}"></label>
+        <label class="row"><span class="lbl">ห้อง</span><select class="field" id="e-room" dir="rtl">${opts}</select></label>
+        <label class="row"><span class="lbl">สถานที่อื่น</span><input class="field" id="e-place" placeholder="เช่น ยิม 2" value="${esc(it && it.place)}"></label>
+      </div>
+      <div class="btns"><button class="btn ghost" data-a="close">ยกเลิก</button><button class="btn" data-a="saveEdit" data-d="${d}" data-p="${p}">บันทึก</button></div>`;
+  };
+}
+
+/* ---------- จัดการหน้าและเหตุการณ์ ---------- */
+const TABS = [["search", "ห้องว่าง", searchView], ["now", "ตอนนี้", nowView], ["mine", "ตารางฉัน", mineView], ["settings", "ตั้งค่า", settingsView]];
+let tab = (location.hash || "").slice(1);
+if (!TABS.some(t => t[0] === tab)) tab = "search";
+
+function render() {
+  const y = window.scrollY;
+  const view = $("#view");
+  view.innerHTML = TABS.find(t => t[0] === tab)[2]();
+  $("#tabs").innerHTML = TABS.map(([k, name]) => `<button class="tab ${k === tab ? "on" : ""}" data-a="tab" data-t="${k}">${svg(k)}<span>${name}</span></button>`).join("");
+  renderSheet();
+  window.scrollTo(0, y);
+}
+function go(t) {
+  tab = t; history.replaceState(null, "", "#" + t);
+  const v = $("#view"); v.classList.remove("view"); void v.offsetWidth; v.classList.add("view");
+  render(); window.scrollTo(0, 0);
+}
+const toggle = (arr, id) => { const i = arr.indexOf(id); i < 0 ? arr.push(id) : arr.splice(i, 1); };
+
+const ACTIONS = {
+  tab: d => go(d.t),
+  close: () => closeSheet(),
+  room: d => { sheetInfo = null; openSheet(roomSheet(d.id, d.day !== undefined ? {day: +d.day, s: +d.s, e: +d.e} : null)); },
+  cell: d => { sheetInfo = {d: +d.d, p: +d.p}; renderSheet(); },
+  fav: d => { toggle(S.fav, d.id); save(); render(); },
+  hide: d => { toggle(S.hide, d.id); save(); render(); },
+  seeAll: d => { Q.day = +d.day; Q.a = +d.s; Q.b = +d.e; go("search"); },
+  qday: d => { Q.day = +d.d; render(); },
+  per: d => {
+    const p = +d.p;
+    if (Q.a === Q.b && p !== Q.a) { Q.b = Math.max(Q.a, p); Q.a = Math.min(Q.a, p); }
+    else { Q.a = Q.b = p; }
+    render();
+  },
+  span: d => { Q.a = +d.s; Q.b = +d.e; render(); },
+  edit: d => openSheet(editSheet(+d.d, +d.p)),
+  saveEdit: d => {
+    const day = +d.d, p = +d.p;
+    S.my[day] = S.my[day] || {};
+    if ($("#e-busy").checked) {
+      const it = {title: $("#e-title").value.trim() || "ไม่ว่าง"};
+      const room = $("#e-room").value, place = $("#e-place").value.trim();
+      if (room) it.room = room;
+      if (place) it.place = place;
+      const old = S.my[day][p];
+      if (old && old.teacher && old.title === it.title) it.teacher = old.teacher;
+      S.my[day][p] = it;
+    } else delete S.my[day][p];
+    save(); closeSheet(); render();
+  },
+  resetMy: () => { if (confirm("คืนค่าตารางเป็นแบบตั้งต้น? ที่แก้ไว้จะหายไป")) { S.my = clone(DATA.timetable.busy); save(); render(); } },
+  floor: d => { S.floor = d.f ? +d.f : null; save(); render(); },
+  skip: d => skipRoom(d.id, d.day !== undefined ? +d.day : undefined, +d.s),
+  unskip: d => { if (S.skip) S.skip.ids = S.skip.ids.filter(x => x !== d.id); save(); render(); },
+  todaySet: d => {
+    const p = +d.p, v = +d.v, prev = (ovrToday(bkk().day) || {})[p];
+    setToday(p, v);
+    toast(`วันนี้คาบ ${p} ${v ? "ไม่ว่าง" : "ว่าง"} (เฉพาะวันนี้)`, () => setToday(p, prev === undefined ? null : prev));
+  },
+  todayClear: d => setToday(+d.p, null),
+  theme: d => { S.theme = d.v; save(); applyTheme(); render(); },
+  rest: d => { toggle(S.rest, +d.p); save(); render(); },
+  clearHist: () => { if (confirm("ล้างห้องที่ข้ามไว้วันนี้และประวัติ \"ใช้ไม่ได้\" ทั้งหมด?")) { S.hist = {}; S.skip = null; save(); render(); } },
+  undo: () => { const f = lastUndo; lastUndo = null; hideToast(); if (f) f(); },
+};
+
+let lastUndo = null, toastTimer = null;
+function toast(msg, undo) {
+  lastUndo = undo || null;
+  const el = $("#toast");
+  el.innerHTML = `<span>${esc(msg)}</span>${undo ? '<button data-a="undo">เลิกทำ</button>' : ""}`;
+  el.classList.add("on");
+  clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 6000);
+}
+function hideToast() { $("#toast").classList.remove("on"); }
+
+function skipRoom(id, day, s) {                      // ห้องนี้ใช้ไม่ได้: ข้ามวันนี้ + จำไว้ลดอันดับช่วงเวลาเดิม
+  const t = bkk();
+  if (!S.skip || S.skip.date !== t.date) S.skip = {date: t.date, ids: []};
+  if (!S.skip.ids.includes(id)) S.skip.ids.push(id);
+  const key = day !== undefined && !isNaN(s) ? day + "-" + s : null;
+  if (key) { const h = S.hist[id] = S.hist[id] || {}; h[key] = (h[key] || 0) + 1; }
+  save(); closeSheet(); render();
+  toast(`ข้าม ${roomTitle(R[id])} วันนี้แล้ว`, () => {
+    if (S.skip) S.skip.ids = S.skip.ids.filter(x => x !== id);
+    if (key && S.hist[id]) { if (--S.hist[id][key] <= 0) delete S.hist[id][key]; }
+    save(); render();
+  });
+}
+function setToday(p, v) {                            // v: 1 = ไม่ว่างวันนี้, 0 = ว่างวันนี้, null = ยกเลิก
+  const t = bkk();
+  if (!S.ovr || S.ovr.date !== t.date) S.ovr = {date: t.date, p: {}};
+  if (v === null || (v === 1) === !!base(t.day, p)) delete S.ovr.p[p];   // เท่ากับตารางหลักก็ไม่ต้องจำ
+  else S.ovr.p[p] = v;
+  save(); closeSheet(); render();
+}
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-a]");
+  if (el && ACTIONS[el.dataset.a]) ACTIONS[el.dataset.a](el.dataset);
+});
+document.addEventListener("change", e => {
+  const el = e.target.closest("[data-c]");
+  if (!el) return;
+  if (el.dataset.c === "smart") { S.smart = el.checked; save(); render(); }
+  if (el.dataset.c === "lowfirst") { S.lowFirst = el.checked; save(); render(); }
+  if (el.dataset.c === "ebusy") $("#e-fields").classList.toggle("hide", !el.checked);
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+setInterval(() => { if (tab === "now" && !sheetFn && !bkk().fixed) render(); }, 30000);
+let hiddenAt = 0;
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { hiddenAt = Date.now(); return; }
+  if (sheetFn) return;
+  if (Date.now() - hiddenAt > 120000) initQ();   // กลับมาหลังนาน: เลือกคาบปัจจุบันใหม่
+  if (tab === "now" || tab === "search") render();
+});
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
+render();
+</script>
+</body>
+</html>
