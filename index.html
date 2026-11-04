@@ -234,7 +234,7 @@ const fmtDur = m => m < 60 ? `${m} นาที` : `${Math.floor(m / 60)} ชม
 const KEY = "avail.v1";
 // skip = ห้องที่กด "ใช้ไม่ได้" วันนี้ · hist = นับครั้งที่ห้องถูกข้ามแต่ละ (วัน-คาบ) · ovr = แก้ตารางเฉพาะวันนี้ · rest = คาบพักที่ไม่ต้องแนะนำ
 function load() {
-  const def = () => ({my: clone(DATA.timetable.busy), fav: [], hide: [], floor: null, smart: false, rest: [], hist: {}, skip: null, ovr: null, theme: "auto", lowFirst: true});
+  const def = () => ({my: clone(DATA.timetable.busy), fav: [], hide: [], floor: null, smart: false, rest: [], hist: {}, skip: null, ovr: null, theme: "auto", lowFirst: true, chain: true, chainMax: 1, chainMin: 1, chainStep: 3});
   try {
     const s = JSON.parse(localStorage.getItem(KEY));
     if (s && s.my) return Object.assign(def(), s);
@@ -327,6 +327,81 @@ function recommend(day, s, e) {
   return out.sort((a, b) => b.k - a.k || liked(a) - liked(b) || lvl(a) - lvl(b) || b.score - a.score || byId(a, b));
 }
 
+/* ---------- ย้ายห้องต่อเนื่อง: ห้อง A ว่างคาบ 1-3 + ห้อง B ว่างคาบ 4-5 = ได้ที่นั่งตลอดคาบ 1-4 ---------- */
+const STEPS = [[0, "ชั้นเดียวกัน"], [1, "ห่างไม่เกิน 1 ชั้น"], [3, "ตึกเดียวกัน"], [9, "ไม่จำกัด"]];
+const lvlOf = r => (r.building === "ตึก 3" ? r.floor : 9);
+function comps(n, k, min) {                    // แบ่ง n คาบเป็น k ท่อน ท่อนละอย่างน้อย min เรียงให้ท่อนแรกยาวสุดก่อน (ย้ายช้าที่สุดก่อน)
+  if (k === 1) return n >= min ? [[n]] : [];
+  const out = [];
+  for (let f = n - (k - 1) * min; f >= min; f--) for (const rest of comps(n - f, k - 1, min)) out.push([f, ...rest]);
+  return out;
+}
+function chains(day, s, e) {
+  const len = e - s + 1;
+  if (!S.chain || len < 2 * S.chainMin) return [];
+  const usable = ROOMS.filter(r => !S.hide.includes(r.id) && !skippedToday(r.id));
+  const freeOn = (r, a, b) => { for (let p = a; p <= b; p++) if (r.busy[day] && r.busy[day][p]) return false; return true; };
+  const cache = {}, cand = (a, b) => cache[a + "-" + b] || (cache[a + "-" + b] = usable.filter(r => freeOn(r, a, b)));
+  const prev = mine(day, s - 1), next = mine(day, e + 1);
+  const pr = prev && prev.room && R[prev.room], nr = next && next.room && R[next.room];
+  const seen = new Set(), out = [];
+  for (let k = 2; k <= S.chainMax + 1; k++) {
+    for (const lens of comps(len, k, S.chainMin)) {
+      let at = s;
+      const ranges = lens.map(n => { const g = [at, at + n - 1]; at += n; return g; });
+      const walk = (i, acc) => {
+        if (out.length >= 4000) return;
+        if (i === ranges.length) {
+          const key = acc.map(r => r.id).join(">");
+          if (seen.has(key)) return;               // ลำดับห้องเดิม เก็บแบบที่ย้ายช้าสุดแบบเดียว
+          seen.add(key);
+          let score = 0;
+          acc.forEach((r, j) => {
+            if (S.fav.includes(r.id)) score += 12;
+            if (S.floor && r.floor === S.floor && r.building === "ตึก 3") score += 6;
+            if (S.smart && r.id.startsWith("Smart")) score += 5;
+            const bad = (S.hist[r.id] && S.hist[r.id][day + "-" + ranges[j][0]]) || 0;
+            score -= Math.min(bad, 3) * 8;
+            if (j) { const c = closeness(acc[j - 1], r); score += c === 0 ? 4 : c === 1 ? 2 : 0; }
+          });
+          const dn = closeness(acc[acc.length - 1], nr);
+          score += dn === -1 ? 10 : dn === 0 ? 8 : dn === 1 ? 4 : 0;
+          if (closeness(acc[0], pr) === 0) score += 4;
+          out.push({key, moves: k - 1, score, lvl: Math.max(...acc.map(lvlOf)), lvlSum: acc.reduce((n, r) => n + lvlOf(r), 0),
+                    near: dn !== null && dn <= 0, segs: acc.map((r, j) => ({r, a: ranges[j][0], b: ranges[j][1]}))});
+          return;
+        }
+        const [a, b] = ranges[i];
+        for (const r of cand(a, b)) {
+          const q = acc[i - 1];
+          if (acc.some(x => x.id === r.id)) continue;
+          if (q) {
+            if (closeness(q, r) > S.chainStep) continue;
+            if (freeOn(q, a, b) || freeOn(r, ranges[i - 1][0], ranges[i - 1][1])) continue;   // ห้องเดียวอยู่ต่อได้ ไม่ต้องย้าย
+          }
+          acc.push(r); walk(i + 1, acc); acc.pop();
+        }
+      };
+      walk(0, []);
+    }
+  }
+  return out.sort((x, y) => x.moves - y.moves || (S.lowFirst ? x.lvl - y.lvl || x.lvlSum - y.lvlSum : 0) || y.score - x.score || (x.key < y.key ? -1 : 1));
+}
+const moveText = (a, b) => {
+  if (a.building !== b.building) return "ต่างตึก";
+  const d = b.floor - a.floor;
+  return d === 0 ? "ชั้นเดียวกัน" : d < 0 ? `ลง ${-d} ชั้น` : `ขึ้น ${d} ชั้น`;
+};
+function chainCard(c, day) {
+  return `<div class="group">` + c.segs.map((g, i) => {
+    const sub = [where(g.r), i ? moveText(c.segs[i - 1].r, g.r) : "", i === c.segs.length - 1 && c.near ? "ใกล้คาบถัดไป" : "", S.fav.includes(g.r.id) ? "ห้องโปรด" : ""].filter(Boolean).join(" · ");
+    return `<button class="row" data-a="room" data-id="${g.r.id}" data-day="${day}" data-s="${g.a}" data-e="${g.b}">
+      <div class="pn"><b>${g.a === g.b ? g.a : g.a + "–" + g.b}</b><small>${fmt(PER[g.a].start)}</small></div>
+      <div class="grow"><div class="t">${esc(roomTitle(g.r))}</div><div class="s">${esc(sub)}</div></div>
+      <span class="end">ถึง ${fmt(PER[g.b].end)}</span>${CHEV}</button>`;
+  }).join("") + `</div>`;
+}
+
 /* ---------- สถานะ "ตอนนี้" ---------- */
 function nextSpan(fromDay, t) {                 // ช่วงว่างแรกของวันเรียนถัดไป
   let d = fromDay;
@@ -365,10 +440,18 @@ const ctxAttr = spec => `data-day="${spec.day}" data-s="${spec.s}" data-e="${spe
 function recsHtml(spec, title) {
   if (!spec) return `<div class="card empty" style="margin-top:26px">ไม่มีคาบว่างในตารางของคุณ</div>`;
   const list = recommend(spec.day, spec.s, spec.e);
-  const top = list.slice(0, 3);
+  const top = list.slice(0, 3), len = spec.e - spec.s + 1;
+  const ch = chains(spec.day, spec.s, spec.e);
+  const noFull = !list.length || list[0].k < len;          // ไม่มีห้องเดียวที่ว่างครบทั้งช่วง -> เสนอแบบย้ายห้องก่อน
+  const chainLink = (txt) => `<button class="link" data-a="seeAll" data-mode="chain" ${ctxAttr(spec)}>${txt}</button>`;
   let h = `<p class="eyebrow" style="margin:26px 4px 10px">${esc(title)}</p>`;
+  if (noFull && ch.length) {
+    h += `<p class="small" style="margin:0 4px 10px">ไม่มีห้องเดียวที่ว่างตลอดช่วง ลองย้ายห้องแบบนี้</p>`
+      + ch.slice(0, 2).map(c => chainCard(c, spec.day)).join("") + chainLink(`ดูแบบย้ายห้องทั้งหมด (${ch.length})`);
+    if (top.length) h += `<p class="eyebrow" style="margin:26px 4px 10px">หรืออยู่ห้องเดียว (ว่างบางส่วน)</p>`;
+  }
   if (!top.length) {
-    h += `<div class="card empty">ไม่มีห้องไหนว่างในช่วงนี้</div>`;
+    if (!(noFull && ch.length)) h += `<div class="card empty">ไม่มีห้องไหนว่างในช่วงนี้</div>`;
   } else {
     const m = top[0], ctx = ctxAttr(spec);
     h += `<div class="card rec">
@@ -389,6 +472,7 @@ function recsHtml(spec, title) {
     }
   }
   h += `<button class="link" data-a="seeAll" ${ctxAttr(spec)}>ดูห้องว่างทั้งหมด (${list.length} ห้อง)</button>`;
+  if (!noFull && ch.length) h += `<br>` + chainLink(`ดูแบบย้ายห้องต่อเนื่อง (${ch.length} แบบ)`);
   return h;
 }
 
@@ -427,7 +511,7 @@ function nowView() {
 }
 
 /* ---------- view: ค้นหา ---------- */
-const Q = {day: 0, a: 1, b: 1};
+const Q = {day: 0, a: 1, b: 1, mode: "one", more: false};
 function initQ() {                              // ค่าเริ่มต้น = คาบที่ว่างตอนนี้ (หรือคาบว่างถัดไป) คาบเดียว
   const st = nowState(bkk());
   const sp = st.kind === "free" ? st.span : st.next;
@@ -442,6 +526,8 @@ const freeUntil = (r, day, p) => {              // ห้องนี้ว่�
 
 function searchView() {
   const spans = freeSpans(Q.day);
+  const ch = chains(Q.day, Q.a, Q.b), canChain = S.chain && Q.b > Q.a;
+  const mode = canChain ? Q.mode : "one";
   const res = ROOMS.filter(r => !S.hide.includes(r.id) && Array.from({length: Q.b - Q.a + 1}, (_, i) => Q.a + i).every(p => !(r.busy[Q.day] && r.busy[Q.day][p])));
   const groups = [];
   for (const r of res) {
@@ -455,18 +541,28 @@ function searchView() {
     return `<button class="pill ${cls}" data-a="per" data-p="${p}"><b>${p}</b><small>${fmt(PER[p].start)}</small></button>`;
   }).join("");
   const chips = spans.length ? spans.map(([a, b]) => `<button class="chip ${a === Q.a && b === Q.b ? "on" : ""}" data-a="span" data-s="${a}" data-e="${b}">${spanText(a, b)}</button>`).join("") : `<span class="small">ไม่มีคาบว่างในวันนี้</span>`;
-  return `<h1 class="large">ห้องว่าง</h1><p class="sub">ห้องที่ว่างตลอดช่วงที่เลือก</p>
-    <div class="seg" id="qday">${DAY_SHORT.map((d, i) => `<button class="${i === Q.day ? "on" : ""}" data-a="qday" data-d="${i}">${d}</button>`).join("")}</div>
-    <div class="pills">${pills}</div>
-    <p class="small">แตะคาบเริ่มต้น แล้วแตะคาบสุดท้ายเพื่อเลือกช่วง</p>
-    <div class="gh">คาบว่างของฉัน</div><div class="chips">${chips}</div>
-    <h2 class="sec" style="margin-top:30px">${res.length} ห้องว่าง</h2>
+  const modeSeg = canChain ? `<div class="seg" style="margin-top:22px">
+      <button class="${mode === "one" ? "on" : ""}" data-a="mode" data-v="one">ห้องเดียว · ${res.length}</button>
+      <button class="${mode === "chain" ? "on" : ""}" data-a="mode" data-v="chain">ย้ายห้อง · ${ch.length}</button></div>` : "";
+  const single = `<h2 class="sec" style="margin-top:${canChain ? 16 : 30}px">${res.length} ห้องว่าง</h2>
     <p class="sub">${spanText(Q.a, Q.b)} · ${timeText(Q.a, Q.b)}</p>
     ${res.length ? groups.map(g => `<div class="gh">${esc(g.key)}</div><div class="group">${g.rooms.map(r => `
       <button class="row" style="${skippedToday(r.id) ? "opacity:.5" : ""}" data-a="room" data-id="${r.id}" data-day="${Q.day}" data-s="${Q.a}" data-e="${Q.b}">
         <div class="grow"><div class="t">${esc(roomTitle(r))}</div><div class="s">${esc(roomSub(r))}</div></div>
         <span class="end">${skippedToday(r.id) ? "ข้ามวันนี้" : "ว่างถึง " + fmt(freeUntil(r, Q.day, Q.a))}</span>${S.fav.includes(r.id) ? `<span class="ibtn on">${svg("star", "star")}</span>` : ""}${CHEV}</button>`).join("")}</div>`).join("")
-      : `<div class="card empty" style="margin-top:14px">ไม่มีห้องไหนว่างตลอดช่วงนี้<br>ลองเลือกช่วงที่สั้นลง</div>`}`;
+      : `<div class="card empty" style="margin-top:14px">ไม่มีห้องเดียวที่ว่างตลอดช่วงนี้${ch.length ? `<br><button class="link" data-a="mode" data-v="chain">ดูแบบย้ายห้อง (${ch.length} แบบ)</button>` : "<br>ลองเลือกช่วงที่สั้นลง"}</div>`}`;
+  const shown = Q.more ? ch.slice(0, 30) : ch.slice(0, 6);
+  const rule = `ย้ายไม่เกิน ${S.chainMax} ครั้ง · อยู่ห้องละอย่างน้อย ${S.chainMin} คาบ · ${STEPS.find(x => x[0] === S.chainStep)[1]}`;
+  const chained = `<h2 class="sec" style="margin-top:16px">${ch.length} แบบย้ายห้อง</h2>
+    <p class="sub">${spanText(Q.a, Q.b)} · ${timeText(Q.a, Q.b)}</p><p class="small" style="margin:2px 0 14px">${esc(rule)}</p>
+    ${ch.length ? shown.map(c => chainCard(c, Q.day)).join("") + (ch.length > shown.length ? `<button class="link" data-a="chainMore">ดูเพิ่ม (อีก ${Math.min(ch.length, 30) - shown.length} แบบ)</button>` : "")
+      : `<div class="card empty">ไม่มีแบบย้ายห้องที่ตรงเงื่อนไข<br><button class="link" data-a="tab" data-t="settings">ปรับเงื่อนไขในตั้งค่า</button></div>`}`;
+  return `<h1 class="large">ห้องว่าง</h1><p class="sub">ห้องที่ว่างตลอดช่วงที่เลือก</p>
+    <div class="seg" id="qday">${DAY_SHORT.map((d, i) => `<button class="${i === Q.day ? "on" : ""}" data-a="qday" data-d="${i}">${d}</button>`).join("")}</div>
+    <div class="pills">${pills}</div>
+    <p class="small">แตะคาบเริ่มต้น แล้วแตะคาบสุดท้ายเพื่อเลือกช่วง</p>
+    <div class="gh">คาบว่างของฉัน</div><div class="chips">${chips}</div>
+    ${modeSeg}${mode === "chain" ? chained : single}`;
 }
 
 /* ---------- view: ตารางของฉัน (ตารางจริง: แถว=คาบ คอลัมน์=วัน แตะช่องเพื่อแก้) ---------- */
@@ -511,6 +607,15 @@ function settingsView() {
     <div class="gh">ช่วงพัก (ไม่แนะนำห้อง)</div>
     <div class="chips">${Array.from({length: MAX_P}, (_, i) => i + 1).map(p => `<button class="chip ${S.rest.includes(p) ? "on" : ""}" data-a="rest" data-p="${p}">${p}</button>`).join("")}</div>
     <p class="small" style="margin:6px 4px 0">เลือกคาบที่ไม่อยากให้แนะนำห้อง เช่น พักเที่ยง คาบนั้นจะถือเป็นช่วงพักและข้ามไป</p>
+    <h2 class="sec">ย้ายห้องต่อเนื่อง</h2><p class="sub">ช่วงหลายคาบที่ไม่มีห้องเดียวว่างตลอด ให้ต่อด้วยห้องอื่น</p>
+    <div class="group" style="margin-top:12px"><label class="row"><div class="grow"><div class="t n">แนะนำแบบย้ายห้อง</div><div class="s">เช่น ห้อง A ว่างคาบ 1–3 แล้วย้ายไปห้อง B คาบ 4</div></div>
+      <span class="switch"><input type="checkbox" data-c="chain" ${S.chain ? "checked" : ""}><span></span></span></label></div>
+    <div class="${S.chain ? "" : "hide"}">
+      <div class="gh">ย้ายได้ไม่เกิน</div><div class="chips">${[1, 2].map(n => `<button class="chip ${S.chainMax === n ? "on" : ""}" data-a="chainMax" data-n="${n}">${n} ครั้ง</button>`).join("")}</div>
+      <div class="gh">อยู่ห้องละอย่างน้อย</div><div class="chips">${[1, 2, 3].map(n => `<button class="chip ${S.chainMin === n ? "on" : ""}" data-a="chainMin" data-n="${n}">${n} คาบ</button>`).join("")}</div>
+      <div class="gh">ห้องที่ย้ายไปต้องอยู่</div><div class="chips">${STEPS.map(([n, name]) => `<button class="chip ${S.chainStep === n ? "on" : ""}" data-a="chainStep" data-n="${n}">${name}</button>`).join("")}</div>
+      <p class="small" style="margin:6px 4px 0">เทียบกับห้องก่อนหน้าที่ต้องย้ายออก ยิ่งเข้มยิ่งเดินน้อย</p>
+    </div>
     <h2 class="sec">ห้อง</h2><p class="sub">ดาว = ห้องโปรด · ตา = ซ่อนห้องจากการแนะนำและค้นหา</p>
     ${groups.map(g => `<div class="gh">${esc(g.key)}</div><div class="group">${g.rooms.map(r => `
       <div class="row" style="${S.hide.includes(r.id) ? "opacity:.45" : ""}">
@@ -614,15 +719,20 @@ const ACTIONS = {
   cell: d => { sheetInfo = {d: +d.d, p: +d.p}; renderSheet(); },
   fav: d => { toggle(S.fav, d.id); save(); render(); },
   hide: d => { toggle(S.hide, d.id); save(); render(); },
-  seeAll: d => { Q.day = +d.day; Q.a = +d.s; Q.b = +d.e; go("search"); },
-  qday: d => { Q.day = +d.d; render(); },
+  seeAll: d => { Q.day = +d.day; Q.a = +d.s; Q.b = +d.e; Q.mode = d.mode === "chain" ? "chain" : "one"; Q.more = false; go("search"); },
+  mode: d => { Q.mode = d.v; Q.more = false; render(); },
+  chainMore: () => { Q.more = true; render(); },
+  chainMax: d => { S.chainMax = +d.n; save(); render(); },
+  chainMin: d => { S.chainMin = +d.n; save(); render(); },
+  chainStep: d => { S.chainStep = +d.n; save(); render(); },
+  qday: d => { Q.day = +d.d; Q.more = false; render(); },
   per: d => {
     const p = +d.p;
     if (Q.a === Q.b && p !== Q.a) { Q.b = Math.max(Q.a, p); Q.a = Math.min(Q.a, p); }
     else { Q.a = Q.b = p; }
-    render();
+    Q.more = false; render();
   },
-  span: d => { Q.a = +d.s; Q.b = +d.e; render(); },
+  span: d => { Q.a = +d.s; Q.b = +d.e; Q.more = false; render(); },
   edit: d => openSheet(editSheet(+d.d, +d.p)),
   saveEdit: d => {
     const day = +d.d, p = +d.p;
@@ -692,6 +802,7 @@ document.addEventListener("change", e => {
   const el = e.target.closest("[data-c]");
   if (!el) return;
   if (el.dataset.c === "smart") { S.smart = el.checked; save(); render(); }
+  if (el.dataset.c === "chain") { S.chain = el.checked; save(); render(); }
   if (el.dataset.c === "lowfirst") { S.lowFirst = el.checked; save(); render(); }
   if (el.dataset.c === "ebusy") $("#e-fields").classList.toggle("hide", !el.checked);
 });

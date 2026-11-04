@@ -1,5 +1,5 @@
 /* ออฟไลน์: ลองโหลดจากเน็ตก่อน (จะได้เวอร์ชันใหม่เสมอ) ถ้าไม่มีเน็ตใช้ของที่แคชไว้ */
-const CACHE = "avail-b867f596a3";
+const CACHE = "avail-4f1be7bc48";
 const ASSETS = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
